@@ -1,4 +1,4 @@
-//go:build (arm || 386) && linux
+//go:build arm || 386 || mips || mipsle || ppc
 
 package lumine
 
