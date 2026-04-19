@@ -22,7 +22,7 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-const Version = "v0.8.1"
+const Version = "v0.9.0"
 
 type Config struct {
 	LogLevel          string             `json:"log_level"`
