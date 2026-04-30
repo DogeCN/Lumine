@@ -35,7 +35,7 @@ func getFilteredInterfaces() (networkInterfaces, error) {
 
 		addrs, err := iface.Addrs()
 		if err != nil {
-			log.Println("Get unicast interface for", iface.Name+":", err)
+			log.Println("Get unicast interface addresses for", iface.Name+":", err)
 			continue
 		}
 
@@ -125,7 +125,7 @@ func (ifaces networkInterfaces) manualSelect() *networkInterface {
 		if err != nil {
 			fmt.Println(err)
 		}
-		if i <= 0 || i > len(ifaces) {
+		if i < 0 || i >= len(ifaces) {
 			fmt.Println("Invalid index")
 			continue
 		}
