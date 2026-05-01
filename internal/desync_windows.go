@@ -15,7 +15,13 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-const minInterval = 100 * time.Millisecond
+var transmitFileSem chan struct{}
+
+func init() {
+	if windows.RtlGetVersion().ProductType == 0x00000001 { // VER_NT_WORKSTATION
+		transmitFileSem = make(chan struct{}, 2)
+	}
+}
 
 func detectMinimalReachableTTL(
 	addr string, ipv6 bool,
@@ -56,7 +62,7 @@ func detectMinimalReachableTTL(
 				ok = true
 				break
 			}
-			if netErr := err.(*net.OpError); !netErr.Timeout() {
+			if te, hasTimeout := err.(timeoutErr); !hasTimeout || !te.Timeout() {
 				return unsetInt, E.WithStr("dial "+F.Int(mid), err)
 			}
 		}
@@ -122,9 +128,9 @@ func sendWithNoise(
 	}
 	defer windows.CloseHandle(ov.HEvent)
 
-	if sem != nil {
-		sem <- struct{}{}
-		defer func() { <-sem }()
+	if transmitFileSem != nil {
+		transmitFileSem <- struct{}{}
+		defer func() { <-transmitFileSem }()
 	}
 
 	rawConn, err := tmpFile.SyscallConn()

@@ -26,7 +26,7 @@ var (
 
 const (
 	unsetInt    = -1
-	unsetString = "-"
+	unsetString = "\x00"
 )
 
 type SniffOverrideMode uint8
@@ -220,7 +220,7 @@ func (p *Policy) UnmarshalJSON(data []byte) error {
 	if tmp.Host == nil {
 		p.Host = unsetString
 	} else if *tmp.Host == unsetString {
-		return E.New("host cannot be `-`")
+		return E.New("host cannot be `\\x00`")
 	} else {
 		p.Host = *tmp.Host
 	}
@@ -228,7 +228,7 @@ func (p *Policy) UnmarshalJSON(data []byte) error {
 	if tmp.MapTo == nil {
 		p.MapTo = unsetString
 	} else if *tmp.MapTo == unsetString {
-		return E.New("map_to cannot be `-`")
+		return E.New("map_to cannot be `\\x00`")
 	} else {
 		p.MapTo = *tmp.MapTo
 	}

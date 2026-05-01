@@ -13,8 +13,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const minInterval = 100 * time.Millisecond
-
 func detectMinimalReachableTTL(
 	addr string, ipv6 bool,
 	maxTTL, attempts int,
@@ -54,7 +52,7 @@ func detectMinimalReachableTTL(
 				ok = true
 				break
 			}
-			if netErr := err.(*net.OpError); !netErr.Timeout() {
+			if te, hasTimeout := err.(timeoutErr); !hasTimeout || !te.Timeout() {
 				return unsetInt, E.WithStr("dial "+F.Int(mid), err)
 			}
 		}

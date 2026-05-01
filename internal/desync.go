@@ -12,6 +12,12 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
+const minInterval = 100 * time.Millisecond
+
+type timeoutErr interface {
+	Timeout() bool
+}
+
 var (
 	calcTTL         func(int) (int, error)
 	ttlCache        *freelru.ShardedLRU[string, int]

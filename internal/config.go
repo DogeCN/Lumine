@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -25,32 +24,28 @@ import (
 const Version = "v0.9.0"
 
 type Config struct {
-	LogLevel          string             `json:"log_level"`
-	TransmitFileLimit int                `json:"transmit_file_limit"`
-	Socks5Addr        string             `json:"socks5_address"`
-	HttpAddr          string             `json:"http_address"`
-	OutboundBinding   dial.BindingOption `json:"outbound_binding"`
-	DNSAddr           string             `json:"dns_addr"`
-	UDPSize           uint16             `json:"udp_minsize"`
-	DoHProxy          string             `json:"socks5_for_doh"`
-	FakeTTLRules      string             `json:"fake_ttl_rules"`
-	DNSSingleflight   bool               `json:"dns_singleflight"`
-	DNSCacheTTL       int                `json:"dns_cache_ttl"`
-	DNSCacheCapacity  int                `json:"dns_cache_cap"`
-	TTLSingleflight   bool               `json:"ttl_singleflight"`
-	TTLCacheTTL       int                `json:"ttl_cache_ttl"`
-	TTLCacheCapacity  int                `json:"ttl_cache_cap"`
-	IPPools           map[string]*IPPool `json:"ip_pools"`
-	Hosts             map[string]string  `json:"hosts"`
-	DefaultPolicy     Policy             `json:"default_policy"`
-	DomainPolicies    map[string]Policy  `json:"domain_policies"`
-	IpPolicies        map[string]Policy  `json:"ip_policies"`
+	LogLevel         string             `json:"log_level"`
+	Socks5Addr       string             `json:"socks5_address"`
+	HttpAddr         string             `json:"http_address"`
+	OutboundBinding  dial.BindingOption `json:"outbound_binding"`
+	DNSAddr          string             `json:"dns_addr"`
+	UDPSize          uint16             `json:"udp_minsize"`
+	DoHProxy         string             `json:"socks5_for_doh"`
+	FakeTTLRules     string             `json:"fake_ttl_rules"`
+	DNSSingleflight  bool               `json:"dns_singleflight"`
+	DNSCacheTTL      int                `json:"dns_cache_ttl"`
+	DNSCacheCapacity int                `json:"dns_cache_cap"`
+	TTLSingleflight  bool               `json:"ttl_singleflight"`
+	TTLCacheTTL      int                `json:"ttl_cache_ttl"`
+	TTLCacheCapacity int                `json:"ttl_cache_cap"`
+	IPPools          map[string]*IPPool `json:"ip_pools"`
+	Hosts            map[string]string  `json:"hosts"`
+	DefaultPolicy    Policy             `json:"default_policy"`
+	DomainPolicies   map[string]Policy  `json:"domain_policies"`
+	IpPolicies       map[string]Policy  `json:"ip_policies"`
 }
 
-var (
-	logLevel = log.INFO
-	sem      chan struct{}
-)
+var logLevel = log.INFO
 
 func hashStringXXHASH(s string) uint32 {
 	return uint32(xxhash.Sum64String(s))
@@ -134,9 +129,6 @@ func LoadConfig(filePath string) (string, string, error) {
 		err = loadTTLRules(conf.FakeTTLRules)
 		if err != nil {
 			return "", "", E.WithStr("load fake ttl rules", err)
-		}
-		if runtime.GOOS == "windows" && conf.TransmitFileLimit > 0 {
-			sem = make(chan struct{}, conf.TransmitFileLimit)
 		}
 	}
 
