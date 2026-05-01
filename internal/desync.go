@@ -166,9 +166,9 @@ func getFakeTTL(logger *log.Logger, p *Policy, addr string, ipv6 bool) (ttl int,
 		}
 		if logger != nil {
 			if cached {
-				logger.Info("Fake TTL (cached):", ttl)
+				logger.Info("Fake TTL for", addr, "(cached):", ttl)
 			} else {
-				logger.Info("Fake TTL:", ttl)
+				logger.Info("Fake TTL for", addr+":", ttl)
 			}
 		}
 	} else {
