@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	"github.com/moi-si/lumine/internal/dial"
+	"github.com/moi-si/lumine/internal/format"
 	F "github.com/moi-si/lumine/internal/format"
 	log "github.com/moi-si/mylog"
 )
@@ -56,7 +57,7 @@ func httpHandler(w http.ResponseWriter, req *http.Request) {
 		atomic.StoreUint32(&httpConnID, 1)
 		connID = 1
 	}
-	logger := log.New(os.Stdout, fmt.Sprintf("[H%05x]", connID), log.LstdFlags, logLevel)
+	logger := log.New(os.Stdout, format.ConnIDToHex5('H', connID), log.LstdFlags, logLevel)
 	logger.Info(req.RemoteAddr, F.Concat("- \"", req.Method, " ", req.RequestURI, " ", req.Proto, "\""))
 
 	if req.Method == http.MethodConnect {

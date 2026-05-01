@@ -240,9 +240,7 @@ func desyncSend(
 		return E.WithStr("get default TTL", err)
 	}
 
-	if fakeSleep < minInterval {
-		fakeSleep = minInterval
-	}
+	fakeSleep = max(minInterval, fakeSleep)
 
 	cut := findLastDotOrMidPos(record, sniStart, sniLen)
 	fakeData := make([]byte, cut)

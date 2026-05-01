@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"github.com/moi-si/lumine/internal/dial"
+	"github.com/moi-si/lumine/internal/format"
 	F "github.com/moi-si/lumine/internal/format"
 	log "github.com/moi-si/mylog"
 )
@@ -75,7 +76,7 @@ func sendReply(logger *log.Logger, conn net.Conn, reply [10]byte) bool {
 }
 
 func socks5Handler(cliConn net.Conn, id uint32) {
-	logger := log.New(os.Stdout, fmt.Sprintf("[S%05x]", id), log.LstdFlags, logLevel)
+	logger := log.New(os.Stdout, format.ConnIDToHex5('S', id), log.LstdFlags, logLevel)
 	logger.Info("Connection from", cliConn.RemoteAddr())
 
 	var (

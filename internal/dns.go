@@ -26,16 +26,23 @@ const (
 	DNSModeDefault = DNSModePreferIPv4
 )
 
+const (
+	DNSModeNamePreferIPv4 = "prefer_ipv4"
+	DNSModeNamePreferIPv6 = "prefer_ipv6"
+	DNSModeNameIPv4Only   = "ipv4_only"
+	DNSModeNameIPv6Only   = "ipv6_only"
+)
+
 func (m DNSMode) String() string {
 	switch m {
 	case DNSModePreferIPv4:
-		return "prefer_ipv4"
+		return DNSModeNamePreferIPv4
 	case DNSModePreferIPv6:
-		return "prefer_ipv6"
+		return DNSModeNamePreferIPv6
 	case DNSModeIPv4Only:
-		return "ipv4_only"
+		return DNSModeNameIPv4Only
 	case DNSModeIPv6Only:
-		return "ipv6_only"
+		return DNSModeNameIPv6Only
 	}
 	return "unknown"
 }
@@ -46,13 +53,13 @@ func (m *DNSMode) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	switch s {
-	case "prefer_ipv4":
+	case DNSModeNamePreferIPv4:
 		*m = DNSModePreferIPv4
-	case "prefer_ipv6":
+	case DNSModeNamePreferIPv6:
 		*m = DNSModePreferIPv6
-	case "ipv4_only":
+	case DNSModeNameIPv4Only:
 		*m = DNSModeIPv4Only
-	case "ipv6_only":
+	case DNSModeNameIPv6Only:
 		*m = DNSModeIPv6Only
 	default:
 		return E.New("invalid dns_mode: " + s)

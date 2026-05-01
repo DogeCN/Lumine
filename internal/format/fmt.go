@@ -10,7 +10,17 @@ func Byte(b byte) string {
 	var hexBuf [2]byte
 	const hexDigits = "0123456789abcdef"
 	hexBuf[0] = hexDigits[b>>4]
-	hexBuf[1] = hexDigits[b&0x0f]
+	hexBuf[1] = hexDigits[b&0xf]
+	return string(hexBuf[:])
+}
+
+func ConnIDToHex5(name byte, id uint32) string {
+	var hexBuf [8]byte
+	hexBuf[0], hexBuf[1], hexBuf[7] = '[', name, ']'
+	const hexDigits = "0123456789abcdef"
+	for i := range 5 {
+		hexBuf[i+2] = hexDigits[(id>>uint(4*(4-i)))&0xf]
+	}
 	return string(hexBuf[:])
 }
 
