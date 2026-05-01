@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/netip"
 	"time"
 
 	E "github.com/moi-si/lumine/internal/errors"
@@ -39,17 +40,18 @@ func (m *Method) UnmarshalJSON(data []byte) error {
 }
 
 type BindingOption struct {
-	Method         Method
-	ManualSelect   bool
-	Zone           string
-	UpdateInterval time.Duration
-	DialTCP        bool
-	DialIPv4Target string
-	DialIPv6Target string
-	DialTimeout    time.Duration
-	CustomIPv4     net.IP
-	CustomIPv6     net.IP
-	CustomZone     string
+	Method          Method
+	ManualSelect    bool
+	Zone            string
+	PreferredPrefix netip.Prefix
+	UpdateInterval  time.Duration
+	DialTCP         bool
+	DialIPv4Target  string
+	DialIPv6Target  string
+	DialTimeout     time.Duration
+	CustomIPv4      net.IP
+	CustomIPv6      net.IP
+	CustomZone      string
 }
 
 func (o *BindingOption) UnmarshalJSON(data []byte) (err error) {
@@ -59,17 +61,18 @@ func (o *BindingOption) UnmarshalJSON(data []byte) (err error) {
 		}
 	}()
 	var tmp struct {
-		Method         Method `json:"method"`
-		ManualSelect   bool   `json:"manual_select"`
-		Zone           string `json:"zone"`
-		UpdateInterval string `json:"update_interval"`
-		DialTCP        bool   `json:"dial_tcp"`
-		DialIPv4Target string `json:"dial_ipv4_target"`
-		DialIPv6Target string `json:"dial_ipv6_target"`
-		DialTimeout    string `json:"dial_timeout"`
-		CustomIPv4     string `json:"custom_ipv4"`
-		CustomIPv6     string `json:"custom_ipv6"`
-		CustomZone     string `json:"custom_zone"`
+		Method          Method `json:"method"`
+		ManualSelect    bool   `json:"manual_select"`
+		Zone            string `json:"zone"`
+		PreferredPrefix string `json:"preferred_prefix"`
+		UpdateInterval  string `json:"update_interval"`
+		DialTCP         bool   `json:"dial_tcp"`
+		DialIPv4Target  string `json:"dial_ipv4_target"`
+		DialIPv6Target  string `json:"dial_ipv6_target"`
+		DialTimeout     string `json:"dial_timeout"`
+		CustomIPv4      string `json:"custom_ipv4"`
+		CustomIPv6      string `json:"custom_ipv6"`
+		CustomZone      string `json:"custom_zone"`
 	}
 	if err = json.Unmarshal(data, &tmp); err != nil {
 		return err
@@ -84,8 +87,13 @@ func (o *BindingOption) UnmarshalJSON(data []byte) (err error) {
 				return fmt.Errorf("parse update_interval %s: %w", tmp.UpdateInterval, err)
 			}
 		}
-		o.ManualSelect = tmp.ManualSelect
-		o.Zone = tmp.Zone
+		o.ManualSelect, o.Zone = tmp.ManualSelect, tmp.Zone
+		if o.Zone == "" && !o.ManualSelect {
+			o.PreferredPrefix, err = netip.ParsePrefix(tmp.PreferredPrefix)
+			if err != nil {
+				return fmt.Errorf("parse preferred_prefix %s: %w", tmp.PreferredPrefix, err)
+			}
+		}
 	case MethodDialDetect:
 		if tmp.UpdateInterval != "" {
 			o.UpdateInterval, err = time.ParseDuration(tmp.UpdateInterval)
@@ -107,7 +115,7 @@ func (o *BindingOption) UnmarshalJSON(data []byte) (err error) {
 		o.CustomIPv6 = net.ParseIP(tmp.CustomIPv6)
 		o.CustomZone = tmp.CustomZone
 		if o.CustomIPv4 == nil && o.CustomIPv6 == nil {
-			return E.New("neither custom IPv4 nor IPv6 specified")
+			return E.New("no custom IPv4 or IPv6 address specified")
 		}
 	}
 	return nil

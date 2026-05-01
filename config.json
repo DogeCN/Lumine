@@ -5,6 +5,8 @@
   "outbound_binding": {
     "method": "off",
     "manual_select": true,
+    "zone": "",
+    "preferred_prefix": "192.168.0.0/16",
     "dial_ipv4_target": "8.8.8.8:53",
     "dial_ipv6_target": "[2001:4860:4860::8888]:53",
     "update_interval": "30m"

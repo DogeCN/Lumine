@@ -155,7 +155,7 @@ func handleHTTP(
 			if err != nil {
 				logger.Error("Connection to", oldTarget, "failed:", err)
 				resp := &http.Response{
-					Status:        "502 Bad Gateway",
+					Status:        status502,
 					StatusCode:    502,
 					Proto:         req.Proto,
 					ProtoMajor:    1,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 
 	E "github.com/moi-si/lumine/internal/errors"
 	F "github.com/moi-si/lumine/internal/format"
@@ -52,10 +53,10 @@ func getFilteredInterfaces() (networkInterfaces, error) {
 			if ip.IsLinkLocalUnicast() {
 				continue
 			}
-			isIPv4, isIPv6 := ip.To4() != nil, ip.To16() != nil
+			isIPv4 := ip.To4() != nil
 			if ipv4 == nil && isIPv4 {
 				ipv4 = ip
-			} else if ipv6 == nil && !isIPv4 && isIPv6 {
+			} else if ipv6 == nil && !isIPv4 && ip.To16() != nil {
 				ipv6 = ip
 			}
 		}
@@ -87,17 +88,25 @@ func (ifaces networkInterfaces) find(name string) (*networkInterface, bool) {
 	return nil, false
 }
 
-func (ifaces networkInterfaces) autoSelect() (*networkInterface, bool) {
-	for i := range ifaces {
-		iface := &ifaces[i]
-		if iface.gateway != "" && iface.ipv4 != nil && iface.ipv4.IsPrivate() {
-			return iface, true
+func (ifaces networkInterfaces) autoSelect(preferredPrefix netip.Prefix) (*networkInterface, bool) {
+	if preferredPrefix.IsValid() {
+		for _, iface := range ifaces {
+			if iface.ipv4 != nil {
+				addr, ok := netip.AddrFromSlice(iface.ipv4)
+				if ok && preferredPrefix.Contains(addr.Unmap()) {
+					return &iface, true
+				}
+			}
 		}
 	}
-	for i := range ifaces {
-		iface := &ifaces[i]
+	for _, iface := range ifaces {
+		if iface.gateway != "" && iface.ipv4 != nil && iface.ipv4.IsPrivate() {
+			return &iface, true
+		}
+	}
+	for _, iface := range ifaces {
 		if iface.gateway != "" && iface.ipv4 != nil {
-			return iface, true
+			return &iface, true
 		}
 	}
 	return nil, false

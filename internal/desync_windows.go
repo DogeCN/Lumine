@@ -62,7 +62,7 @@ func detectMinimalReachableTTL(
 				ok = true
 				break
 			}
-			if te, hasTimeout := err.(timeoutErr); !hasTimeout || !te.Timeout() {
+			if te, hasTimeout := err.(timeout); !hasTimeout || !te.Timeout() {
 				return unsetInt, E.WithStr("dial "+F.Int(mid), err)
 			}
 		}

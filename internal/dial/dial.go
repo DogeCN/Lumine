@@ -104,7 +104,7 @@ func SetLocalAddr(o BindingOption) error {
 			selected = interfaces.manualSelect()
 			zone = selected.name
 		} else {
-			selected, ok = interfaces.autoSelect()
+			selected, ok = interfaces.autoSelect(o.PreferredPrefix)
 			if !ok {
 				fmt.Fprintln(os.Stderr, "No interface with gateway detected")
 				selected = interfaces.manualSelect()
@@ -121,7 +121,7 @@ func SetLocalAddr(o BindingOption) error {
 				var selected *networkInterface
 				var ok bool
 				if zone == "" {
-					selected, ok = interfaces.autoSelect()
+					selected, ok = interfaces.autoSelect(o.PreferredPrefix)
 					if !ok {
 						return nil, nil, "", errNoInterfaceWithGateway
 					}

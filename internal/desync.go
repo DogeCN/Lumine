@@ -14,7 +14,7 @@ import (
 
 const minInterval = 100 * time.Millisecond
 
-type timeoutErr interface {
+type timeout interface {
 	Timeout() bool
 }
 

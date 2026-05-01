@@ -18,6 +18,7 @@ import (
 const (
 	status500 = "500 Internal Server Error"
 	status403 = "403 Forbidden"
+	status502 = "502 Bad Gateway"
 )
 
 var httpConnID uint32
@@ -237,9 +238,10 @@ func forwardHTTPRequest(logger *log.Logger, w http.ResponseWriter, originReq *ht
 	resp, err := transport.RoundTrip(outReq)
 	if err != nil {
 		logger.Error("Transport:", err)
-		http.Error(w, "502 Bad Gateway", http.StatusBadGateway)
+		http.Error(w, status502, http.StatusBadGateway)
 		return
 	}
+	logger.Info("Start forwarding")
 	defer resp.Body.Close()
 
 	maps.Copy(w.Header(), resp.Header)
