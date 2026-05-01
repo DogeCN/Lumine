@@ -68,23 +68,32 @@ const (
 	ModeDefault = ModeTLSRF
 )
 
+const (
+	ModeNameRaw      = "raw"
+	ModeNameDirect   = "direct"
+	ModeNameTLSRF    = "tls-rf"
+	ModeNameTTLD     = "ttl-d"
+	ModeNameBlock    = "block"
+	ModeNameTLSAlert = "tls-alert"
+)
+
 func (m *Mode) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
 	}
 	switch s {
-	case "raw":
+	case ModeNameRaw:
 		*m = ModeRaw
-	case "direct":
+	case ModeNameDirect:
 		*m = ModeDirect
-	case "tls-rf":
+	case ModeNameTLSRF:
 		*m = ModeTLSRF
-	case "ttl-d":
+	case ModeNameTTLD:
 		*m = ModeTTLD
-	case "block":
+	case ModeNameBlock:
 		*m = ModeBlock
-	case "tls-alert":
+	case ModeNameTLSAlert:
 		*m = ModeTLSAlert
 	default:
 		return E.New("invalid mode: " + s)
@@ -95,17 +104,17 @@ func (m *Mode) UnmarshalJSON(data []byte) error {
 func (m Mode) String() string {
 	switch m {
 	case ModeRaw:
-		return "raw"
+		return ModeNameRaw
 	case ModeDirect:
-		return "direct"
+		return ModeNameDirect
 	case ModeTLSRF:
-		return "tls-rf"
+		return ModeNameTLSRF
 	case ModeTTLD:
-		return "ttl-d"
+		return ModeNameTTLD
 	case ModeBlock:
-		return "block"
+		return ModeNameBlock
 	case ModeTLSAlert:
-		return "tls-alert"
+		return ModeNameTLSAlert
 	}
 	return "unknown"
 }

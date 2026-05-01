@@ -3,7 +3,7 @@ package format
 import (
 	"fmt"
 	"strconv"
-	"strings"
+	"unsafe"
 )
 
 func Byte(b byte) string {
@@ -15,40 +15,40 @@ func Byte(b byte) string {
 }
 
 func Concat(values ...any) string {
-	var builder strings.Builder
-	for _, v := range values {
-		switch val := v.(type) {
+	buf := make([]byte, 0, 32)
+	for _, val := range values {
+		switch v := val.(type) {
 		case fmt.Stringer:
-			builder.WriteString(val.String())
+			buf = append(buf, v.String()...)
 		case string:
-			builder.WriteString(val)
+			buf = append(buf, v...)
 		case error:
-			builder.WriteString(val.Error())
+			buf = append(buf, v.Error()...)
 		case int:
-			builder.WriteString(strconv.Itoa(val))
+			buf = strconv.AppendInt(buf, int64(v), 10)
 		case int8:
-			builder.WriteString(Int(val))
+			buf = strconv.AppendInt(buf, int64(v), 10)
 		case int16:
-			builder.WriteString(Int(val))
+			buf = strconv.AppendInt(buf, int64(v), 10)
 		case int32:
-			builder.WriteString(Int(val))
+			buf = strconv.AppendInt(buf, int64(v), 10)
 		case int64:
-			builder.WriteString(Int(val))
+			buf = strconv.AppendInt(buf, v, 10)
 		case uint:
-			builder.WriteString(Uint(val))
+			buf = strconv.AppendUint(buf, uint64(v), 10)
 		case uint8:
-			builder.WriteString(Uint(val))
+			buf = strconv.AppendUint(buf, uint64(v), 10)
 		case uint16:
-			builder.WriteString(Uint(val))
+			buf = strconv.AppendUint(buf, uint64(v), 10)
 		case uint32:
-			builder.WriteString(Uint(val))
+			buf = strconv.AppendUint(buf, uint64(v), 10)
 		case uint64:
-			builder.WriteString(Uint(val))
+			buf = strconv.AppendUint(buf, v, 10)
 		default:
-			panic("unsupported type")
+			panic("format.Concat: unsupported type")
 		}
 	}
-	return builder.String()
+	return unsafe.String(unsafe.SliceData(buf), len(buf))
 }
 
 func Int[T int | int8 | int16 | int32 | int64](v T) string {
