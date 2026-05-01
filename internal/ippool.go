@@ -18,6 +18,8 @@ import (
 	log "github.com/moi-si/mylog"
 )
 
+var ipPools map[string]*IPPool
+
 const (
 	defaultTimeout        = 1 * time.Second
 	defaultUpdateInterval = 30 * time.Minute

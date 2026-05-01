@@ -48,11 +48,8 @@ type Config struct {
 }
 
 var (
-	logLevel      = log.INFO
-	defaultPolicy Policy
-	ipPools       map[string]*IPPool
-	sem           chan struct{}
-	dnsAddr       string
+	logLevel = log.INFO
+	sem      chan struct{}
 )
 
 func hashStringXXHASH(s string) uint32 {
@@ -88,7 +85,7 @@ func LoadConfig(filePath string) (string, string, error) {
 		}
 	}
 
-	if len(conf.IPPools) != 0 {
+	if len(conf.IPPools) > 0 {
 		ipPools = conf.IPPools
 		for tag, pool := range ipPools {
 			logger := log.New(os.Stdout, "[P-"+tag+"]", log.LstdFlags, logLevel)

@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	defaultPolicy Policy
 	domainMatcher *addrtrie.DomainMatcher[*Policy]
 	ipMatcher     *addrtrie.IPv4Trie[*Policy]
 	ipv6Matcher   *addrtrie.IPv6Trie[*Policy]

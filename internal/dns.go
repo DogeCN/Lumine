@@ -61,6 +61,7 @@ func (m *DNSMode) UnmarshalJSON(data []byte) error {
 }
 
 var (
+	dnsAddr         string
 	dnsClient       *dns.Client
 	httpCli         *http.Client
 	dnsExchange     func(req *dns.Msg) (resp *dns.Msg, err error)
