@@ -77,8 +77,7 @@
         "20.207.73.82",
         "20.27.177.113"
       ],
-      "port": 443,
-      "update_interval": "5m"
+      "port": 443
     }
   },
   "hosts": {
@@ -88,7 +87,7 @@
     "*(wikimedia|wikipedia|wiktionary|wikiversity|wikivoyage|wikisource|wikinews|wikidata|mediawiki|wikifunctions|wikibooks|wikiquote).org": "?text-lb.drmrs.wikimedia.org",
     "(maps|upload).wikimedia.org": "?upload-lb.drmrs.wikimedia.org",
     "dumps.wikimedia.org": "",
-    "(gist.|)github.com": "$github",
+    "(gist.|)github.com;patch-diff.githubusercontent.com": "$github",
     "api.github.com": "20.207.73.85",
     "codeload.github.com": "20.207.73.88",
     "*(github.io|.githubusercontent.com);(page|doc)s.github.com": "146.75.48.133",
