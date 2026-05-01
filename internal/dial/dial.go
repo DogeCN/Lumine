@@ -78,7 +78,6 @@ func SetLocalAddr(o BindingOption) error {
 		var (
 			selected     *networkInterface
 			ok           bool
-			zone         string
 			hasFixedZone = o.Zone != ""
 		)
 		if hasFixedZone {

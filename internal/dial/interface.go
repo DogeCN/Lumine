@@ -79,23 +79,25 @@ func getFilteredInterfaces() (networkInterfaces, error) {
 }
 
 func (ifaces networkInterfaces) find(name string) (*networkInterface, bool) {
-	for _, iface := range ifaces {
-		if iface.name == name {
-			return &iface, true
+	for i := range ifaces {
+		if ifaces[i].name == name {
+			return &ifaces[i], true
 		}
 	}
 	return nil, false
 }
 
 func (ifaces networkInterfaces) autoSelect() (*networkInterface, bool) {
-	for _, iface := range ifaces {
+	for i := range ifaces {
+		iface := &ifaces[i]
 		if iface.gateway != "" && iface.ipv4 != nil && iface.ipv4.IsPrivate() {
-			return &iface, true
+			return iface, true
 		}
 	}
-	for _, iface := range ifaces {
+	for i := range ifaces {
+		iface := &ifaces[i]
 		if iface.gateway != "" && iface.ipv4 != nil {
-			return &iface, true
+			return iface, true
 		}
 	}
 	return nil, false
