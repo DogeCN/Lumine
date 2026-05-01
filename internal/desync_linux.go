@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/moi-si/lumine/internal/dial"
 	E "github.com/moi-si/lumine/internal/errors"
 	F "github.com/moi-si/lumine/internal/format"
 	"golang.org/x/sys/unix"
@@ -25,7 +26,8 @@ func detectMinimalReachableTTL(
 	} else {
 		level, opt = unix.IPPROTO_IP, unix.IP_TTL
 	}
-	dialer := net.Dialer{Timeout: dialTimeout}
+	dialer := dial.NewDialer(ipv6)
+	dialer.Timeout = dialTimeout
 
 	low, high := 1, maxTTL
 	found := unsetInt

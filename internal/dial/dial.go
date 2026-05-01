@@ -18,6 +18,18 @@ var (
 	globalIPv6Dialer atomic.Pointer[net.Dialer]
 )
 
+// Note: the returned *net.Dialer is a shallow copy – you may change Timeout, Control,
+// etc., but do NOT modify Resolver (they share the global instances).
+func NewDialer(isIPv6 bool) *net.Dialer {
+	var d net.Dialer
+	if isIPv6 {
+		d = *globalIPv6Dialer.Load()
+	} else {
+		d = *globalIPv4Dialer.Load()
+	}
+	return &d
+}
+
 func DialContext(ctx context.Context, network, address string) (net.Conn, error) {
 	var dialer *net.Dialer
 	if address[0] == '[' {
@@ -38,7 +50,9 @@ func DialTCPTimeout(address string, timeout time.Duration) (net.Conn, error) {
 	return DialTimeout(context.Background(), "tcp", address, timeout)
 }
 
-func laddrMonitor(interval time.Duration, fn func() (net.IP, net.IP, string, error)) {
+type monitor = func() (net.IP, net.IP, string, error)
+
+func laddrMonitor(interval time.Duration, fn monitor) {
 	ticker := time.NewTicker(interval)
 	for {
 		<-ticker.C
@@ -66,8 +80,11 @@ func laddrMonitor(interval time.Duration, fn func() (net.IP, net.IP, string, err
 var errNoInterfaceWithGateway = E.New("no interface with gateway detected")
 
 func SetLocalAddr(o BindingOption) error {
-	var ipv4, ipv6 net.IP
-	var zone string
+	var (
+		ipv4, ipv6 net.IP
+		zone       string
+		monitor    monitor
+	)
 	switch o.Method {
 	case MethodOff:
 	case MethodSelectInterface:
@@ -75,12 +92,9 @@ func SetLocalAddr(o BindingOption) error {
 		if err != nil {
 			return err
 		}
-		var (
-			selected     *networkInterface
-			ok           bool
-			hasFixedZone = o.Zone != ""
-		)
-		if hasFixedZone {
+		var selected *networkInterface
+		var ok bool
+		if o.Zone != "" {
 			selected, ok = interfaces.find(o.Zone)
 			if !ok {
 				return E.New("interface not found: " + o.Zone)
@@ -99,7 +113,7 @@ func SetLocalAddr(o BindingOption) error {
 		}
 		ipv4, ipv6 = selected.ipv4, selected.ipv6
 		if o.UpdateInterval > 0 {
-			go laddrMonitor(o.UpdateInterval, func() (net.IP, net.IP, string, error) {
+			monitor = func() (net.IP, net.IP, string, error) {
 				interfaces, err := getFilteredInterfaces()
 				if err != nil {
 					return nil, nil, "", err
@@ -118,7 +132,7 @@ func SetLocalAddr(o BindingOption) error {
 					}
 				}
 				return selected.ipv4, selected.ipv6, selected.name, nil
-			})
+			}
 		}
 	case MethodDialDetect:
 		network := "udp"
@@ -139,7 +153,7 @@ func SetLocalAddr(o BindingOption) error {
 			}
 		}
 		if o.UpdateInterval > 0 {
-			go laddrMonitor(o.UpdateInterval, func() (ipv4, ipv6 net.IP, zone string, err error) {
+			monitor = func() (ipv4, ipv6 net.IP, zone string, err error) {
 				var err1, err2 error
 				if o.DialIPv4Target != "" {
 					ipv4, _, err1 = detectByDial(network, o.DialIPv4Target, o.DialTimeout)
@@ -149,7 +163,7 @@ func SetLocalAddr(o BindingOption) error {
 				}
 				err = E.Join(err1, err2)
 				return
-			})
+			}
 		}
 	case MethodCustom:
 		ipv4, ipv6, zone = o.CustomIPv4, o.CustomIPv6, o.CustomZone
@@ -158,10 +172,13 @@ func SetLocalAddr(o BindingOption) error {
 	if ipv4 != nil {
 		ipv4Dialer.LocalAddr = &net.TCPAddr{IP: ipv4}
 	}
+	globalIPv4Dialer.Store(ipv4Dialer)
 	if ipv6 != nil {
 		ipv6Dialer.LocalAddr = &net.TCPAddr{IP: ipv6, Zone: zone}
 	}
-	globalIPv4Dialer.Store(ipv4Dialer)
 	globalIPv6Dialer.Store(ipv6Dialer)
+	if monitor != nil {
+		go laddrMonitor(o.UpdateInterval, monitor)
+	}
 	return nil
 }

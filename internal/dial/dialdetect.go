@@ -22,5 +22,5 @@ func detectByDial(network, target string, timeout time.Duration) (net.IP, string
 	case *net.UDPAddr:
 		return laddr.IP, laddr.Zone, nil
 	}
-	return nil, "", E.New("unsupported network")
+	return nil, "", E.New("unexpected network")
 }
