@@ -3,7 +3,6 @@ package lumine
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -51,7 +50,7 @@ func (m *SniffOverrideMode) UnmarshalJSON(data []byte) error {
 	case "policy_exists":
 		*m = SniffOverridePolicyExists
 	default:
-		return errors.New("invalid sniff_override: " + s)
+		return E.New("invalid sniff_override: " + s)
 	}
 	return nil
 }
@@ -88,7 +87,7 @@ func (m *Mode) UnmarshalJSON(data []byte) error {
 	case "tls-alert":
 		*m = ModeTLSAlert
 	default:
-		return errors.New("invalid mode: " + s)
+		return E.New("invalid mode: " + s)
 	}
 	return nil
 }
@@ -137,7 +136,7 @@ func (b *TriBool) UnmarshalJSON(data []byte) error {
 	case "true":
 		*b = BoolTrue
 	default:
-		return errors.New("invalid bool: " + s)
+		return E.New("invalid bool: " + s)
 	}
 	return nil
 }
@@ -211,7 +210,7 @@ func (p *Policy) UnmarshalJSON(data []byte) error {
 	if tmp.Host == nil {
 		p.Host = unsetString
 	} else if *tmp.Host == unsetString {
-		return errors.New("host cannot be `-`")
+		return E.New("host cannot be `-`")
 	} else {
 		p.Host = *tmp.Host
 	}
@@ -219,7 +218,7 @@ func (p *Policy) UnmarshalJSON(data []byte) error {
 	if tmp.MapTo == nil {
 		p.MapTo = unsetString
 	} else if *tmp.MapTo == unsetString {
-		return errors.New("map_to cannot be `-`")
+		return E.New("map_to cannot be `-`")
 	} else {
 		p.MapTo = *tmp.MapTo
 	}
@@ -509,7 +508,7 @@ func (c *policyConn) Write(b []byte) (n int, err error) {
 		return
 	}
 	if dohConnPolicy.TLS13Only.IsTrue() && !hasKeyShare {
-		return 0, errors.New("not a TLS 1.3 ClientHello")
+		return 0, E.New("not a TLS 1.3 ClientHello")
 	}
 	if sniStart == -1 {
 		return c.Conn.Write(b)
@@ -599,7 +598,7 @@ func genDoHDialFunc() (func(ctx context.Context, network, address string) (net.C
 	}
 	switch dohConnPolicy.Mode {
 	case ModeBlock, ModeTLSAlert:
-		return nil, errors.New("the mode of the DoH cannot be `block`")
+		return nil, E.New("the mode of the DoH cannot be `block`")
 	}
 	port := parsedURL.Port()
 	if port == "" {

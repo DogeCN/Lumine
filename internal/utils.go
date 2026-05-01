@@ -3,7 +3,6 @@ package lumine
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -35,63 +34,63 @@ const (
 
 func parseClientHello(data []byte) (prtVer []byte, sniStart int, sniLen int, hasKeyShare, hasECH bool, err error) {
 	if data[0] != tlsRecordTypeHandshake {
-		return nil, -1, 0, false, false, errors.New("not a TLS handshake record")
+		return nil, -1, 0, false, false, E.New("not a TLS handshake record")
 	}
 
 	if data[1] != tlsMajorVersion {
-		return nil, -1, 0, false, false, errors.New("not a standard TLS record")
+		return nil, -1, 0, false, false, E.New("not a standard TLS record")
 	}
 
 	recordLen := int(binary.BigEndian.Uint16(data[3:5]))
 	if len(data) < tlsRecordHeaderLen+recordLen {
-		return nil, -1, 0, false, false, errors.New("record length exceeds data size")
+		return nil, -1, 0, false, false, E.New("record length exceeds data size")
 	}
 	offset := tlsRecordHeaderLen
 
 	if recordLen < tlsHandshakeHeaderLen {
-		return nil, -1, 0, false, false, errors.New("handshake message too short")
+		return nil, -1, 0, false, false, E.New("handshake message too short")
 	}
 	if data[offset] != tlsHandshakeTypeClientHello {
 		return nil, -1, 0, false, false, fmt.Errorf("not a ClientHello handshake (type=%d)", data[offset])
 	}
 	handshakeLen := int(uint32(data[offset+1])<<16 | uint32(data[offset+2])<<8 | uint32(data[offset+3]))
 	if handshakeLen+tlsHandshakeHeaderLen > recordLen {
-		return nil, -1, 0, false, false, errors.New("handshake length exceeds record length")
+		return nil, -1, 0, false, false, E.New("handshake length exceeds record length")
 	}
 	offset += tlsHandshakeHeaderLen
 
 	if handshakeLen < 2+32+1 {
-		return nil, -1, 0, false, false, errors.New("ClientHello too short for mandatory fields")
+		return nil, -1, 0, false, false, E.New("ClientHello too short for mandatory fields")
 	}
 	prtVer = data[offset : offset+2]
 	offset += 2 + 32
 	if offset >= len(data) {
-		return prtVer, -1, 0, false, false, errors.New("unexpected end after Random")
+		return prtVer, -1, 0, false, false, E.New("unexpected end after Random")
 	}
 	sessionIDLen := int(data[offset])
 	offset++
 	if offset+sessionIDLen > len(data) {
-		return prtVer, -1, 0, false, false, errors.New("session_id length exceeds data")
+		return prtVer, -1, 0, false, false, E.New("session_id length exceeds data")
 	}
 	offset += sessionIDLen
 
 	if offset+2 > len(data) {
-		return prtVer, -1, 0, false, false, errors.New("cannot read cipher_suites length")
+		return prtVer, -1, 0, false, false, E.New("cannot read cipher_suites length")
 	}
 	csLen := int(binary.BigEndian.Uint16(data[offset : offset+2]))
 	offset += 2
 	if offset+csLen > len(data) {
-		return prtVer, -1, 0, false, false, errors.New("cipher_suites exceed data")
+		return prtVer, -1, 0, false, false, E.New("cipher_suites exceed data")
 	}
 	offset += csLen
 
 	if offset >= len(data) {
-		return prtVer, -1, 0, false, false, errors.New("cannot read compression_methods length")
+		return prtVer, -1, 0, false, false, E.New("cannot read compression_methods length")
 	}
 	compMethodsLen := int(data[offset])
 	offset++
 	if offset+compMethodsLen > len(data) {
-		return prtVer, -1, 0, false, false, errors.New("compression_methods exceed data")
+		return prtVer, -1, 0, false, false, E.New("compression_methods exceed data")
 	}
 	offset += compMethodsLen
 
@@ -102,7 +101,7 @@ func parseClientHello(data []byte) (prtVer []byte, sniStart int, sniLen int, has
 	extTotalLen := int(binary.BigEndian.Uint16(data[offset : offset+2]))
 	offset += 2
 	if offset+extTotalLen > len(data) {
-		return prtVer, -1, 0, false, false, errors.New("extensions length exceeds data")
+		return prtVer, -1, 0, false, false, E.New("extensions length exceeds data")
 	}
 	extensionsEnd := offset + extTotalLen
 
@@ -115,7 +114,7 @@ func parseClientHello(data []byte) (prtVer []byte, sniStart int, sniLen int, has
 		extDataEnd := extDataStart + extLen
 
 		if extDataEnd > extensionsEnd {
-			return prtVer, sniStart, sniLen, hasKeyShare, hasECH, errors.New("extension length exceeds extensions block")
+			return prtVer, sniStart, sniLen, hasKeyShare, hasECH, E.New("extension length exceeds extensions block")
 		}
 
 		if extType == tlsExtTypeKeyShare {
@@ -128,25 +127,25 @@ func parseClientHello(data []byte) (prtVer []byte, sniStart int, sniLen int, has
 
 		if sniStart == -1 && extType == tlsExtTypeSNI {
 			if extLen < 2 {
-				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, errors.New("malformed SNI extension (too short for list length)")
+				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, E.New("malformed SNI extension (too short for list length)")
 			}
 			listLen := int(binary.BigEndian.Uint16(data[extDataStart : extDataStart+2]))
 			if listLen+2 != extLen {
-				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, errors.New("SNI list length field mismatch")
+				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, E.New("SNI list length field mismatch")
 			}
 			cursor := extDataStart + 2
 			if cursor+3 > extDataEnd {
-				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, errors.New("SNI entry too short")
+				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, E.New("SNI entry too short")
 			}
 			nameType := data[cursor]
 			if nameType != 0 {
-				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, errors.New("unsupported SNI name type")
+				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, E.New("unsupported SNI name type")
 			}
 			nameLen := int(binary.BigEndian.Uint16(data[cursor+1 : cursor+3]))
 			nameStart := cursor + 3
 			nameEnd := nameStart + nameLen
 			if nameEnd > extDataEnd {
-				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, errors.New("SNI name length exceeds extension")
+				return prtVer, sniStart, sniLen, hasKeyShare, hasECH, E.New("SNI name length exceeds extension")
 			}
 			sniStart = nameStart
 			sniLen = nameLen
@@ -230,7 +229,7 @@ func isIPv6(ip string) bool {
 func transformIP(ipStr string, targetNetStr string) (string, error) {
 	ip, err := netip.ParseAddr(ipStr)
 	if err != nil {
-		return "", errors.New("invalid IP")
+		return "", E.New("invalid IP")
 	}
 
 	prefix, err := netip.ParsePrefix(targetNetStr)
@@ -239,7 +238,7 @@ func transformIP(ipStr string, targetNetStr string) (string, error) {
 	}
 
 	if ip.Is4() != prefix.Addr().Is4() {
-		return "", errors.New("IP version mismatch between source IP and target network")
+		return "", E.New("IP version mismatch between source IP and target network")
 	}
 
 	networkAddr := prefix.Masked().Addr()

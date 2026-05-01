@@ -3,16 +3,16 @@
 package lumine
 
 import (
-	"errors"
 	"net"
 	"time"
 
 	"github.com/elastic/go-freelru"
+	E "github.com/moi-si/lumine/internal/errors"
 	log "github.com/moi-si/mylog"
 	"golang.org/x/sync/singleflight"
 )
 
-var errTTLDNotSupported = errors.New("`ttl-d` is not supported on current system")
+var errTTLDNotSupported = E.New("`ttl-d` is not supported on current system")
 
 var (
 	ttlCache        *freelru.ShardedLRU[string, int]

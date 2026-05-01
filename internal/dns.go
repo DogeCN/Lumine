@@ -55,7 +55,7 @@ func (m *DNSMode) UnmarshalJSON(data []byte) error {
 	case "ipv6_only":
 		*m = DNSModeIPv6Only
 	default:
-		return errors.New("invalid dns_mode: " + s)
+		return E.New("invalid dns_mode: " + s)
 	}
 	return nil
 }
@@ -92,7 +92,7 @@ func dohExchange(req *dns.Msg) (resp *dns.Msg, err error) {
 	}
 	defer httpResp.Body.Close()
 	if httpResp.StatusCode != http.StatusOK {
-		return nil, errors.New("bad http status: " + httpResp.Status)
+		return nil, E.New("bad http status: " + httpResp.Status)
 	}
 	respWire, err := io.ReadAll(httpResp.Body)
 	if err != nil {
@@ -137,7 +137,7 @@ func doDNSResolve(domain string, dnsMode DNSMode) (string, error) {
 		return "", E.WithStr("dns exchange", err)
 	}
 	if resp.Rcode != dns.RcodeSuccess {
-		return "", errors.New("bad rcode: " + dns.RcodeToString[resp.Rcode])
+		return "", E.New("bad rcode: " + dns.RcodeToString[resp.Rcode])
 	}
 
 	var ip net.IP
@@ -145,12 +145,12 @@ func doDNSResolve(domain string, dnsMode DNSMode) (string, error) {
 	case DNSModeIPv4Only:
 		ip = pickFirstARecord(resp.Answer)
 		if ip == nil {
-			return "", errors.New("A record not found")
+			return "", E.New("A record not found")
 		}
 	case DNSModeIPv6Only:
 		ip = pickFirstAAAARecord(resp.Answer)
 		if ip == nil {
-			return "", errors.New("AAAA record not found")
+			return "", E.New("AAAA record not found")
 		}
 	case DNSModePreferIPv4:
 		ip = pickFirstARecord(resp.Answer)
@@ -161,11 +161,11 @@ func doDNSResolve(domain string, dnsMode DNSMode) (string, error) {
 				return "", E.WithStr("dns exchange", errors.Join(err, err2))
 			}
 			if resp.Rcode != dns.RcodeSuccess {
-				return "", errors.New("bad rcode: " + dns.RcodeToString[resp.Rcode])
+				return "", E.New("bad rcode: " + dns.RcodeToString[resp.Rcode])
 			}
 			ip = pickFirstAAAARecord(resp.Answer)
 			if ip == nil {
-				return "", errors.New("record not found")
+				return "", E.New("record not found")
 			}
 		}
 	case DNSModePreferIPv6:
@@ -177,11 +177,11 @@ func doDNSResolve(domain string, dnsMode DNSMode) (string, error) {
 				return "", E.WithStr("dns exchange", errors.Join(err, err2))
 			}
 			if resp.Rcode != dns.RcodeSuccess {
-				return "", errors.New("bad rcode: " + dns.RcodeToString[resp.Rcode])
+				return "", E.New("bad rcode: " + dns.RcodeToString[resp.Rcode])
 			}
 			ip = pickFirstARecord(resp.Answer)
 			if ip == nil {
-				return "", errors.New("record not found")
+				return "", E.New("record not found")
 			}
 		}
 	}

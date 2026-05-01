@@ -2,7 +2,6 @@ package lumine
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"github.com/moi-si/lumine/internal/dial"
+	E "github.com/moi-si/lumine/internal/errors"
 	log "github.com/moi-si/mylog"
 )
 
@@ -70,7 +70,7 @@ func (p *IPPool) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if len(ips) == 0 {
-		return errors.New("no valid IPs after parsing")
+		return E.New("no valid IPs after parsing")
 	}
 	if len(ips) > maxIPPoolSize {
 		return fmt.Errorf("IP pool exceeds maximum size (%d): %d", maxIPPoolSize, len(ips))
@@ -182,7 +182,7 @@ func (p *IPPool) Init(logger *log.Logger) error {
 	valid := p.curValidIPs > 0
 	p.mu.RUnlock()
 	if !valid {
-		return errors.New("no valid IP found after initial scan")
+		return E.New("no valid IP found after initial scan")
 	}
 
 	go p.monitor()
@@ -341,15 +341,15 @@ func (p *IPPool) Get() string {
 
 func getFromIPPool(tag string) (ipStr string, err error) {
 	if len(ipPools) == 0 {
-		return "", errors.New("no ip pools")
+		return "", E.New("no ip pools")
 	}
 	ipPool, exists := ipPools[tag]
 	if !exists {
-		return "", errors.New("ip pool " + tag + " does not exist")
+		return "", E.New("ip pool " + tag + " does not exist")
 	}
 	ip := ipPool.Get()
 	if ip == "" {
-		return "", errors.New("cannot get ip from " + tag)
+		return "", E.New("cannot get ip from " + tag)
 	}
 	return ip, nil
 }

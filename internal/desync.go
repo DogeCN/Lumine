@@ -3,7 +3,6 @@
 package lumine
 
 import (
-	"errors"
 	"sort"
 	"time"
 
@@ -28,7 +27,7 @@ type rule struct {
 
 func parseTTLRules(conf string) ([]rule, error) {
 	if len(conf) == 0 {
-		return nil, errors.New("empty config")
+		return nil, E.New("empty config")
 	}
 	b := []byte(conf)
 
@@ -40,7 +39,7 @@ func parseTTLRules(conf string) ([]rule, error) {
 			i++
 		}
 		if start == i {
-			return nil, errors.New("invalid rule: missing left number")
+			return nil, E.New("invalid rule: missing left number")
 		}
 		a := 0
 		for _, c := range b[start:i] {
@@ -48,11 +47,11 @@ func parseTTLRules(conf string) ([]rule, error) {
 		}
 
 		if i >= len(b) {
-			return nil, errors.New("invalid rule: missing operator")
+			return nil, E.New("invalid rule: missing operator")
 		}
 		op := b[i] // '-' or '='
 		if op != '-' && op != '=' {
-			return nil, errors.New("invalid operator")
+			return nil, E.New("invalid operator")
 		}
 		i++
 
@@ -61,7 +60,7 @@ func parseTTLRules(conf string) ([]rule, error) {
 			i++
 		}
 		if start == i {
-			return nil, errors.New("invalid rule: missing right number")
+			return nil, E.New("invalid rule: missing right number")
 		}
 		val := 0
 		for _, c := range b[start:i] {
@@ -95,7 +94,7 @@ func loadTTLRules(conf string) error {
 			for i := range len(conf) {
 				c := conf[i]
 				if c < '0' || c > '9' {
-					return 0, errors.New("invalid integer config")
+					return 0, E.New("invalid integer config")
 				}
 				val = val*10 + int(c-'0')
 			}
@@ -112,7 +111,7 @@ func loadTTLRules(conf string) error {
 					return r.val, nil
 				}
 			}
-			return 0, errors.New("no matching TTL rule")
+			return 0, E.New("no matching TTL rule")
 		}
 	}
 	return nil
@@ -149,7 +148,7 @@ func getFakeTTL(logger *log.Logger, p *Policy, addr string, ipv6 bool) (ttl int,
 			return unsetInt, E.WithStr("detect minimum reachable TTL", err)
 		}
 		if ttl == unsetInt {
-			return unsetInt, errors.New("reachable TTL not found")
+			return unsetInt, E.New("reachable TTL not found")
 		}
 		if calcTTL != nil {
 			ttl, err = calcTTL(ttl)
