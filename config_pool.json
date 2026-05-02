@@ -103,7 +103,8 @@
     "(cn|purr|et).nytimes.com": "",
     "*nyt(imes|).com": "199.232.137.164",
     "*netlify.app": "^$netlify",
-    "archive.org": "$archive"
+    "archive.org": "$archive",
+    "linux.do": "^"
   },
   "default_policy": {
     "reply_first": false,
