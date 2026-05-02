@@ -9,7 +9,7 @@ import (
 	"github.com/elastic/go-freelru"
 	E "github.com/moi-si/lumine/internal/errors"
 	log "github.com/moi-si/mylog"
-	"golang.org/x/sync/singleflight"
+	"github.com/moi-si/lumine/internal/singleflight"
 )
 
 var errTTLDNotSupported = E.New("`ttl-d` is not supported on current system")
@@ -17,7 +17,7 @@ var errTTLDNotSupported = E.New("`ttl-d` is not supported on current system")
 var (
 	ttlCache        *freelru.ShardedLRU[string, int]
 	ttlCacheTTL     time.Duration
-	ttlSingleflight *singleflight.Group
+	ttlSingleflight *singleflight.Group[int]
 )
 
 func loadTTLRules(string) error {

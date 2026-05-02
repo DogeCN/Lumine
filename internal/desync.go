@@ -9,7 +9,7 @@ import (
 	"github.com/elastic/go-freelru"
 	E "github.com/moi-si/lumine/internal/errors"
 	log "github.com/moi-si/mylog"
-	"golang.org/x/sync/singleflight"
+	"github.com/moi-si/lumine/internal/singleflight"
 )
 
 const minInterval = 100 * time.Millisecond
@@ -22,7 +22,7 @@ var (
 	calcTTL         func(int) (int, error)
 	ttlCache        *freelru.ShardedLRU[string, int]
 	ttlCacheTTL     time.Duration
-	ttlSingleflight *singleflight.Group
+	ttlSingleflight *singleflight.Group[int]
 )
 
 type rule struct {
@@ -133,13 +133,9 @@ func getMinimalReachableTTL(addr string, ipv6 bool, maxTTL, attempts int, dialTi
 	var err error
 	found := unsetInt
 	if ttlSingleflight != nil {
-		var v any
-		v, err, _ = ttlSingleflight.Do(addr, func() (any, error) {
+		found, err, _ = ttlSingleflight.Do(addr, func() (int, error) {
 			return detectMinimalReachableTTL(addr, ipv6, maxTTL, attempts, dialTimeout)
 		})
-		if err == nil {
-			found = v.(int)
-		}
 	} else {
 		found, err = detectMinimalReachableTTL(addr, ipv6, maxTTL, attempts, dialTimeout)
 	}

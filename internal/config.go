@@ -18,7 +18,7 @@ import (
 	E "github.com/moi-si/lumine/internal/errors"
 	log "github.com/moi-si/mylog"
 	"golang.org/x/net/proxy"
-	"golang.org/x/sync/singleflight"
+	"github.com/moi-si/lumine/internal/singleflight"
 )
 
 const Version = "v0.9.1"
@@ -91,10 +91,10 @@ func LoadConfig(filePath string) (string, string, error) {
 	}
 
 	if conf.DNSSingleflight {
-		dnsSingleflight = new(singleflight.Group)
+		dnsSingleflight = new(singleflight.Group[string])
 	}
 	if conf.TTLSingleflight {
-		ttlSingleflight = new(singleflight.Group)
+		ttlSingleflight = new(singleflight.Group[int])
 	}
 
 	if conf.DNSCacheTTL < 0 {

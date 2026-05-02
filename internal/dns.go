@@ -12,7 +12,7 @@ import (
 	"github.com/elastic/go-freelru"
 	"github.com/miekg/dns"
 	E "github.com/moi-si/lumine/internal/errors"
-	"golang.org/x/sync/singleflight"
+	"github.com/moi-si/lumine/internal/singleflight"
 )
 
 type DNSMode uint8
@@ -74,7 +74,7 @@ var (
 	dnsExchange     func(req *dns.Msg) (resp *dns.Msg, err error)
 	dnsCache        *freelru.ShardedLRU[string, string]
 	dnsCacheTTL     time.Duration
-	dnsSingleflight *singleflight.Group
+	dnsSingleflight *singleflight.Group[string]
 )
 
 func do53Exchange(req *dns.Msg) (resp *dns.Msg, err error) {
@@ -211,13 +211,9 @@ func dnsResolve(domain string, dnsMode DNSMode) (ip string, cached bool, err err
 	if dnsSingleflight == nil {
 		ip, err = doDNSResolve(domain, dnsMode)
 	} else {
-		var v any
-		v, err, _ = dnsSingleflight.Do(domain, func() (any, error) {
+		ip, err, _ = dnsSingleflight.Do(domain, func() (string, error) {
 			return doDNSResolve(domain, dnsMode)
 		})
-		if err == nil {
-			ip = v.(string)
-		}
 	}
 
 	return
