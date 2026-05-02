@@ -13,18 +13,20 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func ttlLevelOption(isIPv6 bool) (int, int) {
+	if isIPv6 {
+		return unix.IPPROTO_IPV6, unix.IPV6_UNICAST_HOPS
+	}
+	return unix.IPPROTO_IP, unix.IP_TTL
+}
+
 func detectMinimalReachableTTL(
-	addr string, ipv6 bool,
+	addr string, isIPv6 bool,
 	maxTTL, attempts int,
 	dialTimeout time.Duration,
 ) (int, error) {
-	var level, opt int
-	if ipv6 {
-		level, opt = unix.IPPROTO_IPV6, unix.IPV6_UNICAST_HOPS
-	} else {
-		level, opt = unix.IPPROTO_IP, unix.IP_TTL
-	}
-	dialer := dial.NewDialer(ipv6)
+	level, opt := ttlLevelOption(isIPv6)
+	dialer := dial.NewDialer(isIPv6)
 	dialer.Timeout = dialTimeout
 
 	low, high := 1, maxTTL
@@ -149,7 +151,7 @@ func sendWithNoise(
 }
 
 func desyncSend(
-	conn net.Conn, ipv6 bool,
+	conn net.Conn, isIPv6 bool,
 	record []byte, sniStart, sniLen int,
 	fakeTTL int, fakeSleep time.Duration,
 ) error {
@@ -165,24 +167,16 @@ func desyncSend(
 		return E.WithStr("raw control", err)
 	}
 
-	var level, opt, defaultTTL int
-	if ipv6 {
-		level = unix.IPPROTO_IPV6
-		opt = unix.IPV6_UNICAST_HOPS
-	} else {
-		level = unix.IPPROTO_IP
-		opt = unix.IP_TTL
-	}
-	defaultTTL, err = unix.GetsockoptInt(fd, level, opt)
+	level, opt := ttlLevelOption(isIPv6)
+	defaultTTL, err := unix.GetsockoptInt(fd, level, opt)
 	if err != nil {
 		return E.WithStr("get default TTL", err)
 	}
 
-	fakeSleep = max(minInterval, fakeSleep)
-
 	cut := findLastDotOrMidPos(record, sniStart, sniLen)
 	fakeData := make([]byte, cut)
 	copy(fakeData, record[:sniStart])
+	fakeSleep = max(minInterval, fakeSleep)
 
 	if err = sendWithNoise(
 		fd, rawConn,

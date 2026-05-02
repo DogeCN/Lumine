@@ -18,7 +18,7 @@ import (
 type DNSMode uint8
 
 const (
-	DNSModeUnknown DNSMode = iota
+	DNSModeUnset DNSMode = iota
 	DNSModePreferIPv4
 	DNSModePreferIPv6
 	DNSModeIPv4Only

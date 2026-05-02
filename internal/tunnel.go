@@ -221,108 +221,111 @@ func handleTLS(logger *log.Logger, recordLen int,
 		sendTLSAlert(logger, cliConn, prtVer, tlsAlertProtocolVersion, tlsAlertLevelFatal)
 		return
 	}
-	if sniStart <= 0 || sniLen <= 0 {
+
+	var mode Mode
+	if sniStart <= 0 {
 		logger.Info("SNI not found")
-		if dstConn == nil {
-			dstConn, err = dial.DialTCPTimeout(target, p.ConnectTimeout)
-			if err != nil {
-				logger.Error("Connection to", oldTarget, "failed:", err)
-				return
+		mode = ModeDirect
+	} else if hasECH {
+		logger.Info(F.Concat("ECH detected ", "(SNI=", record[sniStart : sniStart+sniLen], "), ignored"))
+		mode = ModeDirect
+	} else if sniStr := string(record[sniStart : sniStart+sniLen]); originHost != sniStr {
+		logger.Info("Mismatched SNI:", sniStr)
+		switch p.SniffOverrideMode {
+		case SniffOverrideRouteOnly:
+			if sniPolicy, exists := domainMatcher.Find(sniStr); exists {
+				if sniPolicy.Mode == ModeBlock {
+					logger.Info("Connection blocked:", sniStr)
+					return
+				}
+				if sniPolicy.Mode == ModeTLSAlert {
+					logger.Info("Connection blocked (TLS alert)", sniStr)
+					sendTLSAlert(logger, cliConn, prtVer, tlsAlertAccessDenied, tlsAlertLevelFatal)
+					return
+				}
+				p = mergePolicies(sniPolicy, p)
+				logger.Info("New policy:", p)
+			}
+		case SniffOverrideAlways, SniffOverridePolicyExists:
+			newDst, sniPolicy, failed, blocked, policyNotExists := genPolicy(
+				logger, sniStr, false, p.SniffOverrideMode == SniffOverridePolicyExists)
+			switch {
+			case failed:
+				logger.Error("Failed to generate SNI policy; falling back to origin")
+			case policyNotExists:
+				logger.Info("SNI policy not found; falling back to origin")
+			default:
+				if blocked {
+					logger.Info("Connection blocked:", sniStr)
+					return
+				}
+				if sniPolicy.Mode == ModeTLSAlert {
+					logger.Info("Connection blocked (TLS alert):", sniStr)
+					sendTLSAlert(logger, cliConn, prtVer, tlsAlertAccessDenied, tlsAlertLevelFatal)
+					return
+				}
+				logger.Info("New policy:", sniPolicy)
+				if sniPolicy.Port != 0 && sniPolicy.Port != -1 {
+					originPort = F.Int(sniPolicy.Port)
+				}
+				newTarget := net.JoinHostPort(newDst, originPort)
+				newConn, err := dial.DialTCPTimeout(newTarget, sniPolicy.ConnectTimeout)
+				if err == nil {
+					if dstConn != nil {
+						dstConn.Close()
+					}
+					dstConn, p, target = newConn, sniPolicy, newTarget
+					logger.Info("Target has been changed to", sniStr)
+				} else {
+					logger.Error(F.Concat("Connection to ", newTarget, " failed:", err, "; falling back to origin"))
+				}
 			}
 		}
+	}
+
+	if dstConn == nil {
+		dstConn, err = dial.DialTCPTimeout(target, p.ConnectTimeout)
+		if err != nil {
+			logger.Error("Connection to", oldTarget, "failed:", err)
+			return
+		}
+	}
+	if mode == ModeUnset {
+		mode = p.Mode
+	}
+
+	switch mode {
+	case ModeDirect, ModeRaw:
 		if _, err = dstConn.Write(record); err != nil {
 			logger.Error("Send ClientHello directly:", err)
 			return
 		}
 		logger.Info("Sent ClientHello directly")
-	} else {
-		sniStr := string(record[sniStart : sniStart+sniLen])
-		if originHost != sniStr {
-			logger.Info("Mismatched SNI:", sniStr)
-			switch p.SniffOverrideMode {
-			case SniffOverrideAlways, SniffOverridePolicyExists:
-				if hasECH {
-					logger.Info("Detected ECH in ClientHello; skipping sniff override")
-					break
-				}
-				returnWhenDomainNotFound := p.SniffOverrideMode == SniffOverridePolicyExists
-				newDst, sniPolicy, failed, blocked, policyNotExists := genPolicy(logger, sniStr, false, returnWhenDomainNotFound)
-				if failed {
-					logger.Error("Failed to generate SNI policy; falling back to origin")
-				} else if policyNotExists {
-					logger.Info("SNI policy not found; falling back to origin")
-				} else {
-					sniPolicyExists := sniPolicy != nil
-					if blocked || (sniPolicyExists && sniPolicy.Mode == ModeBlock) {
-						logger.Info("Connection blocked")
-						return
-					}
-					if sniPolicy.Mode == ModeTLSAlert {
-						logger.Info("Connection blocked (TLS alert)")
-						sendTLSAlert(logger, cliConn, prtVer, tlsAlertAccessDenied, tlsAlertLevelFatal)
-						return
-					}
-					logger.Info("New policy:", sniPolicy)
-					if sniPolicy.Port != 0 && sniPolicy.Port != -1 {
-						originPort = F.Int(sniPolicy.Port)
-					}
-					newTarget := net.JoinHostPort(newDst, originPort)
-					newConn, err := dial.DialTCPTimeout(newTarget, sniPolicy.ConnectTimeout)
-					if err == nil {
-						if dstConn != nil {
-							dstConn.Close()
-						}
-						dstConn = newConn
-						p = sniPolicy
-						target = newTarget
-						logger.Info("Target has been changed to", sniStr)
-					} else {
-						logger.Error(F.Concat("Connection to ", newTarget, " failed: ", err, "; falling back to origin"))
-					}
-				}
-			}
+	case ModeTLSRF:
+		err = sendRecords(dstConn, record, sniStart, sniLen,
+			p.NumRecords, p.NumSegments,
+			p.OOB.IsTrue(), p.OOBEx.IsTrue(),
+			p.ModMinorVer.IsTrue(), p.WaitForAck.IsTrue(), p.SendInterval)
+		if err != nil {
+			logger.Error("TLS fragment:", err)
+			return
 		}
-
-		if dstConn == nil {
-			dstConn, err = dial.DialTCPTimeout(target, p.ConnectTimeout)
-			if err != nil {
-				logger.Error("Connection to", oldTarget, "failed:", err)
-				return
-			}
+		logger.Info("Sent ClientHello in fragments")
+	case ModeTTLD:
+		isIPv6 := target[0] == '['
+		ttl, err := getFakeTTL(logger, p, target, isIPv6)
+		if err != nil {
+			logger.Error("Get fake TTL:", err)
+			return
 		}
-		switch p.Mode {
-		case ModeDirect, ModeRaw:
-			if _, err = dstConn.Write(record); err != nil {
-				logger.Error("Send ClientHello:", err)
-				return
-			}
-			logger.Info("Sent ClientHello directly")
-		case ModeTLSRF:
-			err = sendRecords(dstConn, record, sniStart, sniLen,
-				p.NumRecords, p.NumSegments,
-				p.OOB.IsTrue(), p.OOBEx.IsTrue(),
-				p.ModMinorVer.IsTrue(), p.WaitForAck.IsTrue(), p.SendInterval)
-			if err != nil {
-				logger.Error("TLS fragment:", err)
-				return
-			}
-			logger.Info("Sent ClientHello in fragments")
-		case ModeTTLD:
-			ipv6 := target[0] == '['
-			ttl, err := getFakeTTL(logger, p, target, ipv6)
-			if err != nil {
-				logger.Error("Get fake TTL:", err)
-				return
-			}
-			if err = desyncSend(
-				dstConn, ipv6, record,
-				sniStart, sniLen, ttl, p.FakeSleep,
-			); err != nil {
-				logger.Error("TTL desync:", err)
-				return
-			}
-			logger.Info("Sent ClientHello with fake packet")
+		if err = desyncSend(
+			dstConn, isIPv6, record,
+			sniStart, sniLen, ttl, p.FakeSleep,
+		); err != nil {
+			logger.Error("TTL desync:", err)
+			return
 		}
+		logger.Info("Sent ClientHello with fake packet")
 	}
 	return dstConn, true
 }

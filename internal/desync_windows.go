@@ -23,18 +23,20 @@ func init() {
 	}
 }
 
+func ttlLevelOption(isIPv6 bool) (int, int) {
+	if isIPv6 {
+		return windows.IPPROTO_IPV6, windows.IPV6_UNICAST_HOPS
+	}
+	return windows.IPPROTO_IP, windows.IP_TTL
+}
+
 func detectMinimalReachableTTL(
-	addr string, ipv6 bool,
+	addr string, isIPv6 bool,
 	maxTTL, attempts int,
 	dialTimeout time.Duration,
 ) (int, error) {
-	var level, opt int
-	if ipv6 {
-		level, opt = windows.IPPROTO_IPV6, windows.IPV6_UNICAST_HOPS
-	} else {
-		level, opt = windows.IPPROTO_IP, windows.IP_TTL
-	}
-	dialer := dial.NewDialer(ipv6)
+	level, opt := ttlLevelOption(isIPv6)
+	dialer := dial.NewDialer(isIPv6)
 	dialer.Timeout = dialTimeout
 
 	low, high := 1, maxTTL
@@ -211,7 +213,7 @@ func sendWithNoise(
 }
 
 func desyncSend(
-	conn net.Conn, ipv6 bool,
+	conn net.Conn, isIPv6 bool,
 	record []byte, sniStart, sniLen, fakeTTL int, fakeSleep time.Duration,
 ) error {
 	rawConn, err := getTCPRawConn(conn)
@@ -227,24 +229,16 @@ func desyncSend(
 		return E.WithStr("raw control", err)
 	}
 
-	var level, opt int
-	if ipv6 {
-		level = windows.IPPROTO_IPV6
-		opt = windows.IPV6_UNICAST_HOPS
-	} else {
-		level = windows.IPPROTO_IP
-		opt = windows.IP_TTL
-	}
+	level, opt := ttlLevelOption(isIPv6)
 	defaultTTL, err := windows.GetsockoptInt(sockHandle, level, opt)
 	if err != nil {
 		return E.WithStr("get default TTL", err)
 	}
 
-	fakeSleep = max(minInterval, fakeSleep)
-
 	cut := findLastDotOrMidPos(record, sniStart, sniLen)
 	fakeData := make([]byte, cut)
 	copy(fakeData, record[:sniStart])
+	fakeSleep = max(minInterval, fakeSleep)
 
 	if err = sendWithNoise(
 		sockHandle,

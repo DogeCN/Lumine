@@ -36,6 +36,7 @@ const (
 	SniffOverrideOff
 	SniffOverrideAlways
 	SniffOverridePolicyExists
+	SniffOverrideRouteOnly
 )
 
 func (m *SniffOverrideMode) UnmarshalJSON(data []byte) error {
@@ -50,6 +51,8 @@ func (m *SniffOverrideMode) UnmarshalJSON(data []byte) error {
 		*m = SniffOverrideAlways
 	case "policy_exists":
 		*m = SniffOverridePolicyExists
+	case "route_only":
+		*m = SniffOverrideRouteOnly
 	default:
 		return E.New("invalid sniff_override: " + s)
 	}
@@ -59,7 +62,7 @@ func (m *SniffOverrideMode) UnmarshalJSON(data []byte) error {
 type Mode uint8
 
 const (
-	ModeUnknown Mode = iota
+	ModeUnset Mode = iota
 	ModeRaw
 	ModeDirect
 	ModeTLSRF
@@ -347,7 +350,7 @@ func (p Policy) String() string {
 	if p.Port != unsetInt && p.Port != 0 {
 		fields = append(fields, ":"+F.Int(p.Port))
 	}
-	if p.DNSMode != DNSModeUnknown && (p.Host == "" || p.Host == unsetString) {
+	if p.DNSMode != DNSModeUnset && (p.Host == "" || p.Host == unsetString) {
 		fields = append(fields, p.DNSMode.String())
 	}
 	if p.HttpStatus > 0 {
@@ -434,10 +437,10 @@ func mergePolicies(policies ...*Policy) *Policy {
 		if merged.TLS13Only.IsUnset() && !p.TLS13Only.IsUnset() {
 			merged.TLS13Only = p.TLS13Only
 		}
-		if merged.Mode == ModeUnknown && p.Mode != ModeUnknown {
+		if merged.Mode == ModeUnset && p.Mode != ModeUnset {
 			merged.Mode = p.Mode
 		}
-		if merged.DNSMode == DNSModeUnknown && p.DNSMode != DNSModeUnknown {
+		if merged.DNSMode == DNSModeUnset && p.DNSMode != DNSModeUnset {
 			merged.DNSMode = p.DNSMode
 		}
 		if merged.NumRecords == 0 && p.NumRecords != 0 {
@@ -477,10 +480,10 @@ func mergePolicies(policies ...*Policy) *Policy {
 			merged.SingleTimeout = p.SingleTimeout
 		}
 	}
-	if merged.Mode == ModeUnknown {
+	if merged.Mode == ModeUnset {
 		merged.Mode = ModeDefault
 	}
-	if merged.DNSMode == DNSModeUnknown {
+	if merged.DNSMode == DNSModeUnset {
 		merged.DNSMode = DNSModeDefault
 	}
 	return &merged
