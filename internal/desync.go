@@ -3,13 +3,14 @@
 package lumine
 
 import (
+	"net"
 	"sort"
 	"time"
 
 	"github.com/elastic/go-freelru"
 	E "github.com/moi-si/lumine/internal/errors"
-	log "github.com/moi-si/mylog"
 	"github.com/moi-si/lumine/internal/singleflight"
+	log "github.com/moi-si/mylog"
 )
 
 const minInterval = 100 * time.Millisecond
@@ -124,20 +125,24 @@ func loadTTLRules(conf string) error {
 }
 
 func getMinimalReachableTTL(addr string, ipv6 bool, maxTTL, attempts int, dialTimeout time.Duration) (int, bool, error) {
+	ip, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 0, false, err
+	}
+
 	if ttlCache != nil {
-		if ttl, ok := ttlCache.Get(addr); ok {
+		if ttl, ok := ttlCache.Get(ip); ok {
 			return ttl, true, nil
 		}
 	}
 
-	var err error
 	found := unsetInt
 	if ttlSingleflight != nil {
 		found, err, _ = ttlSingleflight.Do(addr, func() (int, error) {
-			return detectMinimalReachableTTL(addr, ipv6, maxTTL, attempts, dialTimeout)
+			return detectMinimalReachableTTL(ip, addr, ipv6, maxTTL, attempts, dialTimeout)
 		})
 	} else {
-		found, err = detectMinimalReachableTTL(addr, ipv6, maxTTL, attempts, dialTimeout)
+		found, err = detectMinimalReachableTTL(ip, addr, ipv6, maxTTL, attempts, dialTimeout)
 	}
 	return found, false, err
 }

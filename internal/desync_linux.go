@@ -21,7 +21,7 @@ func ttlLevelOption(isIPv6 bool) (int, int) {
 }
 
 func detectMinimalReachableTTL(
-	addr string, isIPv6 bool,
+	ip, addr string, isIPv6 bool,
 	maxTTL, attempts int,
 	dialTimeout time.Duration,
 ) (int, error) {
@@ -67,7 +67,7 @@ func detectMinimalReachableTTL(
 	}
 
 	if ttlCache != nil && found != unsetInt {
-		ttlCache.AddWithLifetime(addr, found, ttlCacheTTL)
+		ttlCache.AddWithLifetime(ip, found, ttlCacheTTL)
 	}
 	return found, nil
 }

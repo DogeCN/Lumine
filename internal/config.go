@@ -16,9 +16,9 @@ import (
 	"github.com/moi-si/addrtrie"
 	"github.com/moi-si/lumine/internal/dial"
 	E "github.com/moi-si/lumine/internal/errors"
+	"github.com/moi-si/lumine/internal/singleflight"
 	log "github.com/moi-si/mylog"
 	"golang.org/x/net/proxy"
-	"github.com/moi-si/lumine/internal/singleflight"
 )
 
 const Version = "v0.9.1"

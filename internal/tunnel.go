@@ -227,7 +227,7 @@ func handleTLS(logger *log.Logger, recordLen int,
 		logger.Info("SNI not found")
 		mode = ModeDirect
 	} else if hasECH {
-		logger.Info(F.Concat("ECH detected ", "(SNI=", record[sniStart : sniStart+sniLen], "), ignored"))
+		logger.Info(F.Concat("ECH detected ", "(SNI=", record[sniStart:sniStart+sniLen], "), ignored"))
 		mode = ModeDirect
 	} else if sniStr := string(record[sniStart : sniStart+sniLen]); originHost != sniStr {
 		logger.Info("Mismatched SNI:", sniStr)

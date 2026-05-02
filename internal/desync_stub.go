@@ -8,8 +8,8 @@ import (
 
 	"github.com/elastic/go-freelru"
 	E "github.com/moi-si/lumine/internal/errors"
-	log "github.com/moi-si/mylog"
 	"github.com/moi-si/lumine/internal/singleflight"
+	log "github.com/moi-si/mylog"
 )
 
 var errTTLDNotSupported = E.New("`ttl-d` is not supported on current system")
